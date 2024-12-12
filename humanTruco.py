@@ -125,48 +125,78 @@ class Jogo:
                 jogador.mao.append(self.baralho.pop())
 
     def jogar_rodada(self):
-        self.equipe1.vitorias_rodada = 0
-        self.equipe2.vitorias_rodada = 0
-        self.valor_rodada = 1
-        
-        for turno in range(3):  # Melhor de 3
-            if self.equipe1.vitorias_rodada == 2 or self.equipe2.vitorias_rodada == 2:
-                break
-                
-            cartas_turno = []
-            jogador_atual = self.primeiro_jogador
+            self.equipe1.vitorias_rodada = 0
+            self.equipe2.vitorias_rodada = 0
+            self.valor_rodada = 1
             
-            print(f"\nTurno {turno + 1}")
-            # Cada jogador joga uma carta
-            for _ in range(4):
-                jogador = self.jogadores[jogador_atual]
-                if jogador.mao:  # Verifica se o jogador ainda tem cartas
-                    print(f"{jogador.nome} jogou carta com força {jogador.mao[0].forca}")
-                    carta_jogada = jogador.jogar_carta(1)
-                    cartas_turno.append((carta_jogada, jogador))
-                jogador_atual = (jogador_atual + 1) % 4
-
-            if cartas_turno:  # Verifica se alguma carta foi jogada
-                # Determinar vencedor do turno
-                carta_vencedora = max(cartas_turno, key=lambda x: x[0].forca)
-                jogador_vencedor = carta_vencedora[1]
-                print(f"{jogador_vencedor.nome} venceu o turno com carta {carta_vencedora[0].forca}")
+            for turno in range(3):  # Melhor de 3
+                if self.equipe1.vitorias_rodada == 2 or self.equipe2.vitorias_rodada == 2:
+                    break
+                    
+                print(f"\n=== Turno {turno + 1} ===")
+                cartas_turno = []
+                jogador_atual = self.primeiro_jogador
                 
-                if jogador_vencedor.equipe == self.equipe1:
-                    self.equipe1.vitorias_rodada += 1
-                else:
-                    self.equipe2.vitorias_rodada += 1
+                # Cada jogador joga uma carta
+                for _ in range(4):
+                    jogador = self.jogadores[jogador_atual]
+                    if jogador.mao:  # Verifica se o jogador ainda tem cartas
+                        print(f"\nVez de {jogador.nome} jogar")
+                        
+                        # Clear screen for privacy
+                        input("Pressione Enter para ver suas cartas...")
+                        print("\n" * 50)  # Simple screen clearing
+                        
+                        jogador.mostrar_mao()
+                        
+                        # Get valid card choice
+                        while True:
+                            try:
+                                escolha = int(input(f"Escolha uma carta (1-{len(jogador.mao)}): "))
+                                if 1 <= escolha <= len(jogador.mao):
+                                    break
+                                print("Escolha inválida!")
+                            except ValueError:
+                                print("Por favor, digite um número válido!")
+                        
+                        carta_jogada = jogador.jogar_carta(escolha)
+                        cartas_turno.append((carta_jogada, jogador))
+                        
+                        print(f"{jogador.nome} jogou carta com força {carta_jogada.forca}")
+                        input("Pressione Enter para continuar...")
+                        print("\n" * 50)  # Clear screen again
+                    
+                    jogador_atual = (jogador_atual + 1) % 4
 
-        # Após a rodada terminar, próximo jogador será o próximo na ordem anti-horária
-        self.primeiro_jogador = (self.primeiro_jogador + 1) % 4
+                if cartas_turno:
+                    # Mostrar todas as cartas jogadas no turno
+                    print("\nCartas jogadas neste turno:")
+                    for carta, jogador in cartas_turno:
+                        print(f"{jogador.nome}: carta com força {carta.forca}")
+                    
+                    # Determinar vencedor do turno
+                    carta_vencedora = max(cartas_turno, key=lambda x: x[0].forca)
+                    jogador_vencedor = carta_vencedora[1]
+                    print(f"\n{jogador_vencedor.nome} venceu o turno com carta {carta_vencedora[0].forca}")
+                    
+                    if jogador_vencedor.equipe == self.equipe1:
+                        self.equipe1.vitorias_rodada += 1
+                    else:
+                        self.equipe2.vitorias_rodada += 1
 
-        # Determinar vencedor da rodada
-        if self.equipe1.vitorias_rodada > self.equipe2.vitorias_rodada:
-            self.equipe1.pontos += self.valor_rodada
-            return self.equipe1
-        else:
-            self.equipe2.pontos += self.valor_rodada
-            return self.equipe2
+                    print(f"\nPlacar do round: {self.equipe1.nome} {self.equipe1.vitorias_rodada} x {self.equipe2.vitorias_rodada} {self.equipe2.nome}")
+                    input("\nPressione Enter para continuar...")
+
+            # Após a rodada terminar, próximo jogador será o próximo na ordem anti-horária
+            self.primeiro_jogador = (self.primeiro_jogador + 1) % 4
+
+            # Determinar vencedor da rodada
+            if self.equipe1.vitorias_rodada > self.equipe2.vitorias_rodada:
+                self.equipe1.pontos += self.valor_rodada
+                return self.equipe1
+            else:
+                self.equipe2.pontos += self.valor_rodada
+                return self.equipe2
 
     def pedir_truco(self, equipe_pedinte):
         if self.valor_rodada == 1:
@@ -192,19 +222,21 @@ class Jogo:
             return self.equipe2
         return None
 
+
 def main():
+    print("=== Bem-vindo ao Truco! ===")
     jogo = Jogo()
     jogo.iniciar_jogo()
 
     vencedor = None
     rodada = 1
     while not vencedor:
-        print(f"\nRodada {rodada}")
+        print(f"\n=== Rodada {rodada} ===")
         print(f"Placar: {jogo.equipe1.nome} {jogo.equipe1.pontos} x {jogo.equipe2.pontos} {jogo.equipe2.nome}")
         jogo.distribuir_cartas()
         
         vencedor_rodada = jogo.jogar_rodada()
-        print(f"Vencedor da rodada: {vencedor_rodada.nome}")
+        print(f"\nVencedor da rodada: {vencedor_rodada.nome}")
         
         vencedor = jogo.verificar_vencedor()
         rodada += 1
@@ -213,3 +245,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+
