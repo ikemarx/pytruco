@@ -16,9 +16,10 @@ class Jogador:
         for i, carta in enumerate(self.mao, 1):
             print(f"{i}. Carta com força {carta.forca}")
 
-    def jogar_carta(self, i):
+    def jogar_carta(self, i, escondida=False):
         carta = self.mao.pop(i - 1)
         self.cartas_jogadas.append(carta)
+
         return carta
 
 class Equipe:
@@ -125,57 +126,126 @@ class Jogo:
                 jogador.mao.append(self.baralho.pop())
 
     def jogar_rodada(self):
-            self.equipe1.vitorias_rodada = 0
-            self.equipe2.vitorias_rodada = 0
-            self.valor_rodada = 1
+        self.equipe1.vitorias_rodada = 0
+        self.equipe2.vitorias_rodada = 0
+        self.valor_rodada = 1
+        self.truco_pedido = False
+        self.quem_pediu_truco = None
+        
+        for turno in range(3):  # Melhor de 3
+            if self.equipe1.vitorias_rodada == 2 or self.equipe2.vitorias_rodada == 2:
+                break
             
-            for turno in range(3):  # Melhor de 3
-                if self.equipe1.vitorias_rodada == 2 or self.equipe2.vitorias_rodada == 2:
-                    break
+            print(f"\n=== Turno {turno + 1} ===")
+            cartas_turno = []
+            jogador_atual = self.primeiro_jogador
+            
+            # Primeira rodada sem cartas escondidas
+            pode_esconder_carta = turno > 0
+            
+            # Cada jogador joga uma carta
+            for _ in range(4):
+                jogador = self.jogadores[jogador_atual]
+                if jogador.mao:  # Verifica se o jogador ainda tem cartas
+                    print(f"\nVez de {jogador.nome} jogar")
                     
-                print(f"\n=== Turno {turno + 1} ===")
-                cartas_turno = []
-                jogador_atual = self.primeiro_jogador
-                
-                # Cada jogador joga uma carta
-                for _ in range(4):
-                    jogador = self.jogadores[jogador_atual]
-                    if jogador.mao:  # Verifica se o jogador ainda tem cartas
-                        print(f"\nVez de {jogador.nome} jogar")
+                    input("Pressione Enter para ver suas cartas...")
+                    print("\n" * 10)  # Clear screen
+                    
+                    jogador.mostrar_mao()
+                    
+                    # Opção de pedir truco
+                    if not self.truco_pedido:
+                        print("\nOpções:")
+                        print("1. Jogar carta")
+                        print("2. Pedir truco")
                         
-                        # Clear screen for privacy
-                        input("Pressione Enter para ver suas cartas...")
-                        print("\n" * 50)  # Simple screen clearing
-                        
-                        jogador.mostrar_mao()
-                        
-                        # Get valid card choice
                         while True:
                             try:
-                                escolha = int(input(f"Escolha uma carta (1-{len(jogador.mao)}): "))
-                                if 1 <= escolha <= len(jogador.mao):
+                                acao = int(input("Escolha (1-2): "))
+                                if acao == 2:
+                                    # Lógica de pedir truco
+                                    proximo_indice = (jogador_atual + 1) % 4
+                                    jogador_proximo = self.jogadores[proximo_indice]
+                                    decisao = self.solicitar_decisao_truco(jogador, jogador_proximo)
+                                    
+                                    if decisao == 0:  # Correr
+                                        self.correr_truco(jogador.equipe)
+                                        return self.equipe1 if jogador.equipe == self.equipe2 else self.equipe2
+                                    
+                                    elif decisao == 1:  # Aceitar
+                                        self.truco_pedido = True
+                                        self.quem_pediu_truco = jogador.equipe
+                                    
+                                    elif decisao == 2:  # Seis
+                                        if self.quem_pediu_truco != jogador.equipe:
+                                            self.pedir_truco(jogador.equipe)
+                                        else:
+                                            print("Você não pode aumentar o valor!")
+                                            continue
+                                    
+                                    elif decisao in [3, 4]:  # Nove ou Doze
+                                        if self.quem_pediu_truco != jogador.equipe:
+                                            self.pedir_truco(jogador.equipe)
+                                        else:
+                                            print("Você não pode aumentar o valor!")
+                                            continue
                                     break
-                                print("Escolha inválida!")
+                                elif acao == 1:
+                                    break
+                                else:
+                                    print("Escolha inválida!")
                             except ValueError:
                                 print("Por favor, digite um número válido!")
-                        
-                        carta_jogada = jogador.jogar_carta(escolha)
-                        cartas_turno.append((carta_jogada, jogador))
-                        
-                        print(f"{jogador.nome} jogou carta com força {carta_jogada.forca}")
-                        input("Pressione Enter para continuar...")
-                        print("\n" * 50)  # Clear screen again
                     
-                    jogador_atual = (jogador_atual + 1) % 4
+                    # Get valid card choice
+                    while True:
+                        try:
+                            # Opção de carta escondida para 2º e 3º turnos
+                            if pode_esconder_carta:
+                                print("\nOpções de carta:")
+                                for i, carta in enumerate(jogador.mao, 1):
+                                    print(f"{i}. Carta com força {carta.forca}")
+                                print(f"{len(jogador.mao) + 1}. Carta escondida")
+                                
+                                escolha = int(input(f"Escolha uma carta (1-{len(jogador.mao) + 1}): "))
+                                
+                                if escolha == len(jogador.mao) + 1:
+                                    # Carta escondida - mostrar cartas e pedir qual esconder
+                                    print("\nSuas cartas:")
+                                    for i, carta in enumerate(jogador.mao, 1):
+                                        print(f"{i}. Carta com força {carta.forca}")
+                                    
+                                    while True:
+                                        esconder = int(input("Qual carta deseja esconder? "))
+                                        if 1 <= esconder <= len(jogador.mao):
+                                            carta_jogada = jogador.jogar_carta(esconder)
+                                            cartas_turno.append((carta_jogada, jogador, True))
+                                            print(f"{jogador.nome} jogou uma carta escondida")
+                                            break
+                                        print("Escolha inválida!")
+                        except ValueError:
+                            print("Por favor, digite um número válido!")
+                    
+                    input("Pressione Enter para continuar...")
+                    print("\n" * 50)  # Clear screen
+                
+                jogador_atual = (jogador_atual + 1) % 4
 
-                if cartas_turno:
-                    # Mostrar todas as cartas jogadas no turno
-                    print("\nCartas jogadas neste turno:")
-                    for carta, jogador in cartas_turno:
+            if cartas_turno:
+                # Mostrar todas as cartas jogadas no turno
+                print("\nCartas jogadas neste turno:")
+                for carta, jogador, escondida in cartas_turno:
+                    if not escondida:
                         print(f"{jogador.nome}: carta com força {carta.forca}")
-                    
-                    # Determinar vencedor do turno
-                    carta_vencedora = max(cartas_turno, key=lambda x: x[0].forca)
+                    else:
+                        print(f"{jogador.nome}: carta escondida")
+                
+                # Determinar vencedor do turno (ignorando cartas escondidas)
+                cartas_visiveis = [(carta, jogador) for carta, jogador, escondida in cartas_turno if not escondida]
+                
+                if cartas_visiveis:
+                    carta_vencedora = max(cartas_visiveis, key=lambda x: x[0].forca)
                     jogador_vencedor = carta_vencedora[1]
                     print(f"\n{jogador_vencedor.nome} venceu o turno com carta {carta_vencedora[0].forca}")
                     
@@ -185,18 +255,76 @@ class Jogo:
                         self.equipe2.vitorias_rodada += 1
 
                     print(f"\nPlacar do round: {self.equipe1.nome} {self.equipe1.vitorias_rodada} x {self.equipe2.vitorias_rodada} {self.equipe2.nome}")
-                    input("\nPressione Enter para continuar...")
+                
+                input("\nPressione Enter para continuar...")
 
-            # Após a rodada terminar, próximo jogador será o próximo na ordem anti-horária
-            self.primeiro_jogador = (self.primeiro_jogador + 1) % 4
+        # Após a rodada terminar, próximo jogador será o próximo na ordem anti-horária
+        self.primeiro_jogador = (self.primeiro_jogador + 1) % 4
 
-            # Determinar vencedor da rodada
-            if self.equipe1.vitorias_rodada > self.equipe2.vitorias_rodada:
-                self.equipe1.pontos += self.valor_rodada
-                return self.equipe1
-            else:
-                self.equipe2.pontos += self.valor_rodada
-                return self.equipe2
+        # Determinar vencedor da rodada
+        if self.equipe1.vitorias_rodada > self.equipe2.vitorias_rodada:
+            self.equipe1.pontos += self.valor_rodada
+            return self.equipe1
+        else:
+            self.equipe2.pontos += self.valor_rodada
+            return self.equipe2
+
+    def solicitar_decisao_truco(self, jogador_atual, jogador_proximo):
+        """
+        Solicita decisão de truco para o próximo jogador.
+        Retorna:
+        - 0: Correr (desistir)
+        - 1: Aceitar
+        - 2: Pedir seis
+        - 3: Pedir nove
+        - 4: Pedir doze
+        """
+        print(f"\n{jogador_proximo.nome}, {jogador_atual.nome} pediu truco!")
+        print("Opções:")
+        print("1. Correr (desistir)")
+        print("2. Aceitar")
+        
+        # Novas regras para pedidos de valor
+        if self.quem_pediu_truco is None:
+            # Primeira vez que truco é pedido
+            print("3. Pedir seis")
+        elif (self.quem_pediu_truco == self.equipe1 and jogador_atual.equipe == self.equipe2) or \
+            (self.quem_pediu_truco == self.equipe2 and jogador_atual.equipe == self.equipe1):
+            # Só pode pedir próximo valor se for a equipe que recebeu o truco
+            if self.valor_rodada == 3:
+                print("3. Pedir seis")
+            elif self.valor_rodada == 6:
+                print("3. Pedir nove")
+            elif self.valor_rodada == 9:
+                print("3. Pedir doze")
+        
+        while True:
+            try:
+                escolha = int(input("Sua escolha: "))
+                
+                if escolha == 1:
+                    return 0
+                elif escolha == 2:
+                    return 1
+                elif escolha == 3:
+                    # Validar se pode pedir próximo valor
+                    if self.quem_pediu_truco is None or \
+                    ((self.quem_pediu_truco == self.equipe1 and jogador_atual.equipe == self.equipe2) or \
+                        (self.quem_pediu_truco == self.equipe2 and jogador_atual.equipe == self.equipe1)):
+                        # Lógica de incremento do valor baseado no estado atual
+                        if self.valor_rodada == 1:
+                            return 2  # Pedir seis
+                        elif self.valor_rodada == 3:
+                            return 3  # Pedir nove
+                        elif self.valor_rodada == 6:
+                            return 4  # Pedir doze
+                    else:
+                        print("Você não pode pedir valor agora!")
+                        continue
+                else:
+                    print("Escolha inválida. Tente novamente.")
+            except ValueError:
+                print("Por favor, digite um número válido!")
 
     def pedir_truco(self, equipe_pedinte):
         if self.valor_rodada == 1:
@@ -245,4 +373,3 @@ def main():
     
 if __name__ == "__main__":
     main()
-
