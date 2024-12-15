@@ -329,12 +329,7 @@ class Jogo:
     def pedir_truco(self, equipe_pedinte):
         if self.valor_rodada == 1:
             self.valor_rodada = 3
-        elif self.valor_rodada == 3:
-            self.valor_rodada = 6
-        elif self.valor_rodada == 6:
-            self.valor_rodada = 9
-        elif self.valor_rodada == 9:
-            self.valor_rodada = 12
+        else: self.valor_rodada += 3
         
         self.truco_pedido = True
         self.quem_pediu_truco = equipe_pedinte
